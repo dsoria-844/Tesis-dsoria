@@ -24,15 +24,20 @@ export default function Actividad() {
   const desde = useDesde(me.id);
   const v = usePoll(() => cargar(paginas, desde), [paginas, desde], 5000);
   const d = v.data;
+  // "En vivo" only while the most recent event is fresh (< 5 min), as on the dashboard card.
+  const ultimo = d?.items[0]?.ultimo_evento;
+  const activo = !!(d && ultimo && new Date(d.ahora).getTime() - new Date(ultimo).getTime() < 5 * 60 * 1000);
   return (
     <>
-      <div className="titulo">
-        <h1>Todas las IPs de origen</h1>
-        <Link to="/" className="btn btn-ghost">← Volver al panel</Link>
+      <div className="page-head">
+        <div><h1>Actividad</h1><p>Todas las IPs de origen registradas por el honeypot, de la más reciente a la más antigua.</p></div>
+        <Link to="/" className="btn btn-ghost">← Volver al resumen</Link>
       </div>
       <Card
         titulo="Actividad histórica por IP"
-        extra={<span className="en-vivo"><i className="punto-vivo" aria-hidden="true" />En vivo</span>}
+        extra={activo
+          ? <span className="en-vivo"><i className="punto-vivo" aria-hidden="true" />En vivo</span>
+          : <span className="muted" style={{ fontSize: 12 }}>Sin ataques en curso</span>}
       >
         <Estado404 error={v.error} />
         {desde && (
@@ -42,7 +47,7 @@ export default function Actividad() {
           </p>
         )}
         {d && d.items.length === 0 && (
-          <p className="muted">{desde ? "No hay actividad nueva desde que limpiaste la vista." : "Todavía no se recibieron ataques."}</p>
+          <p className="muted">{desde ? "No hay actividad nueva desde que limpiaste la vista." : "Todavía no se registraron ataques."}</p>
         )}
         {d && d.items.length > 0 && (
           <>
@@ -52,7 +57,7 @@ export default function Actividad() {
             <TablaActividad items={d.items} ahora={d.ahora} />
             <p className="muted">Mostrando {num(d.items.length)} de {num(d.total_ips)} IP.</p>
             {d.items.length < d.total_ips && (
-              <button className="btn btn-ghost" onClick={() => setPaginas((p) => p + 1)}>Cargar más</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setPaginas((p) => p + 1)}>Cargar más</button>
             )}
           </>
         )}

@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Perfil from "./pages/Perfil";
 import Sessions from "./pages/Sessions";
 import Users from "./pages/Users";
+import { fijarTema, temaActual, type Tema } from "./tema";
 
 interface Ctx { me: Me; logout: () => void }
 const AuthCtx = createContext<Ctx | null>(null);
@@ -26,31 +27,62 @@ export const ROL: Record<Rol, string> = {
   ADMIN_INFRA: "Administrador de Infraestructura",
 };
 
-const TITULOS: [string, string][] = [
-  ["/actividad", "Actividad por IP"], ["/ip/", "Detalle de IP"], ["/sesiones", "Sesiones y comandos"],
-  ["/alertas", "Alertas y credenciales"], ["/usuarios", "Usuarios"], ["/laboratorio", "Laboratorio de ataques"],
-  ["/perfil", "Mi perfil"],
-];
+const iniciales = (correo: string) => correo.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
 
-function Topbar({ me, logout }: Ctx) {
-  const { pathname } = useLocation();
-  const titulo = TITULOS.find(([p]) => pathname.startsWith(p))?.[1] ?? "Panel general";
+function ThemeToggle() {
+  const [tema, setTema] = useState<Tema>(temaActual);
+  const oscuro = tema === "dark";
+  const etiqueta = oscuro ? "Activar tema claro" : "Activar tema oscuro";
+  const alternar = () => { const t: Tema = oscuro ? "light" : "dark"; fijarTema(t); setTema(t); };
   return (
-    <header className="topbar">
-      <h2 className="topbar-titulo">{titulo}</h2>
-      <div className="topbar-user">
-        <Link to="/perfil" className="user-chip" title="Ver mi perfil">
-          <span className="user-correo">{me.correo}</span>
-          <small className="user-rol">{ROL[me.rol]}</small>
-        </Link>
-        <button type="button" className="icon-btn" onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
+    <button type="button" className="icon-btn theme-btn" onClick={alternar} aria-label={etiqueta} aria-pressed={oscuro} title={etiqueta}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {oscuro ? (
+          <>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </>
+        ) : (
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+function TopNav({ me, logout }: Ctx) {
+  const { pathname } = useLocation();
+  const lee = me.rol !== "ADMIN_INFRA";
+  // The IP detail page belongs to the "Actividad" section.
+  const actividadActiva = pathname.startsWith("/actividad") || pathname.startsWith("/ip/");
+  return (
+    <header className="topnav">
+      <div className="topnav-in">
+        <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true" />Honeypot ASI</Link>
+        <nav className="navlinks" aria-label="Secciones">
+          <NavLink to="/" end>Resumen</NavLink>
+          <NavLink to="/actividad" className={actividadActiva ? "active" : ""}>Actividad</NavLink>
+          {lee && <NavLink to="/sesiones">Sesiones</NavLink>}
+          {lee && <NavLink to="/alertas">Alertas</NavLink>}
+          {!lee && <NavLink to="/laboratorio">Laboratorio</NavLink>}
+          {!lee && <NavLink to="/usuarios">Usuarios</NavLink>}
+        </nav>
+        <div className="topnav-end">
+          <span className="pill">Prototipo · entorno aislado</span>
+          <ThemeToggle />
+          <Link to="/perfil" className="avatar" aria-label={`Mi perfil (${me.correo})`} title={`${me.correo} · ${ROL[me.rol]}`}>
+            {iniciales(me.correo)}
+          </Link>
+          <button type="button" className="icon-btn" onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -60,34 +92,21 @@ function Shell({ me, logout }: Ctx) {
   const lee = me.rol !== "ADMIN_INFRA";
   return (
     <AuthCtx.Provider value={{ me, logout }}>
-      <div className="app">
-        <aside className="side">
-          <div className="brand">
-            <span className="dot" /> Honeypot <b>ASI</b>
-          </div>
-          <nav>
-            <NavLink to="/" end>Panel general</NavLink>
-            {lee && <NavLink to="/sesiones">Sesiones y comandos</NavLink>}
-            {lee && <NavLink to="/alertas">Alertas y credenciales</NavLink>}
-            {me.rol === "ADMIN_INFRA" && <NavLink to="/usuarios">Usuarios</NavLink>}
-            {me.rol === "ADMIN_INFRA" && <NavLink to="/laboratorio">Laboratorio de ataques</NavLink>}
-          </nav>
-        </aside>
-        <main className="main">
-          <Topbar me={me} logout={logout} />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/actividad" element={<Actividad />} />
-            <Route path="/ip/:ip" element={<IpDetalle />} />
-            <Route path="/sesiones" element={lee ? <Sessions /> : <Navigate to="/" />} />
-            <Route path="/alertas" element={lee ? <Alerts /> : <Navigate to="/" />} />
-            <Route path="/usuarios" element={me.rol === "ADMIN_INFRA" ? <Users /> : <Navigate to="/" />} />
-            <Route path="/perfil" element={<Perfil />} />
-            <Route path="/laboratorio" element={me.rol === "ADMIN_INFRA" ? <Lab /> : <Navigate to="/" />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </main>
-      </div>
+      <TopNav me={me} logout={logout} />
+      <main className="page">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/actividad" element={<Actividad />} />
+          <Route path="/ip/:ip" element={<IpDetalle />} />
+          <Route path="/sesiones" element={lee ? <Sessions /> : <Navigate to="/" />} />
+          <Route path="/alertas" element={lee ? <Alerts /> : <Navigate to="/" />} />
+          <Route path="/usuarios" element={me.rol === "ADMIN_INFRA" ? <Users /> : <Navigate to="/" />} />
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/laboratorio" element={me.rol === "ADMIN_INFRA" ? <Lab /> : <Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+        <p className="foot-note">Laboratorio aislado sin salida a Internet</p>
+      </main>
     </AuthCtx.Provider>
   );
 }

@@ -50,16 +50,16 @@ function Terminal({ s }: { s: SesionDetalle }) {
         <span className="term-titulo">Reproducción de sesión · {s.ip_origen}:{s.puerto_origen ?? "—"} · {s.protocolo}</span>
         <span className="term-ctl">
           {jugando
-            ? <button className="btn btn-ghost" onClick={() => setJugando(false)}>⏸ Pausar</button>
-            : <button className="btn" onClick={reproducir}>▶ Reproducir</button>}
-          <button className="btn btn-ghost" onClick={() => { setJugando(false); setVisibles(0); }}>⏮</button>
+            ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => setJugando(false)}>⏸ Pausar</button>
+            : <button type="button" className="btn btn-sm" onClick={reproducir}>▶ Reproducir</button>}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setJugando(false); setVisibles(0); }} aria-label="Volver al inicio" title="Volver al inicio">⏮</button>
           <select value={vel} onChange={(e) => setVel(Number(e.target.value))} aria-label="Velocidad">
             <option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option>
           </select>
         </span>
       </div>
       <pre className="tty">
-        {lineas.length === 0 && <span className="muted">Sesión sin intentos ni comandos (solo conexión/banner).</span>}
+        {lineas.length === 0 && <span className="tty-t">Sesión sin intentos ni comandos (solo conexión/banner).</span>}
         {lineas.slice(0, visibles).map((l, i) => (
           <div key={i} className={`tty-${l.clase}`}>
             <span className="tty-n">{String(i + 1).padStart(2, " ")}</span>
@@ -98,35 +98,35 @@ export default function Sessions() {
 
   return (
     <>
-      <div className="titulo"><h1>Explorador de sesiones y auditoría forense</h1></div>
+      <div className="page-head"><div><h1>Sesiones</h1><p>Cada conexión recibida por el honeypot. Elegí una para reproducirla comando por comando.</p></div></div>
       <Card>
         <div className="filtros">
-          <input placeholder="Filtrar por IP o subred (ej. 203.0.113.0/24)" value={ip} onChange={(e) => { setIp(e.target.value); setPag(0); }} />
-          <select value={proto} onChange={(e) => { setProto(e.target.value); setPag(0); }}>
+          <input aria-label="Filtrar por IP o subred" placeholder="Filtrar por IP o subred (ej. 203.0.113.0/24)" value={ip} onChange={(e) => { setIp(e.target.value); setPag(0); }} />
+          <select aria-label="Protocolo" value={proto} onChange={(e) => { setProto(e.target.value); setPag(0); }}>
             <option value="">Todos los protocolos</option><option value="SSH">SSH</option><option value="TELNET">Telnet</option>
           </select>
-          <select value={conCmd} onChange={(e) => { setConCmd(e.target.value); setPag(0); }}>
+          <select aria-label="Con o sin comandos" value={conCmd} onChange={(e) => { setConCmd(e.target.value); setPag(0); }}>
             <option value="">Con o sin shell</option><option value="true">Ejecutó comandos</option><option value="false">Sin comandos</option>
           </select>
         </div>
         <Estado404 error={lista.error} />
-        <table className="clic">
+        <div className="tabla-wrap"><table className="clic" style={{ minWidth: 640 }}>
           <thead><tr><th>Inicio</th><th>IP origen</th><th>Puerto</th><th>Proto.</th><th>Duración</th><th>Intentos</th><th>Comandos</th><th>Acceso</th></tr></thead>
           <tbody>
             {lista.data?.items.map((s) => (
               <tr key={s.id} className={s.id === sel ? "sel" : ""} onClick={() => setSel(s.id)}>
-                <td>{fecha(s.fecha_inicio)}</td><td><code>{s.ip_origen}</code></td><td>{s.puerto_origen ?? "—"}</td>
-                <td>{s.protocolo}</td><td>{s.duracion_segundos == null ? "activa" : `${s.duracion_segundos} s`}</td>
-                <td>{num(s.n_intentos)}</td><td>{s.n_comandos}</td><td>{s.obtuvo_acceso ? "sí" : "no"}</td>
+                <td><button type="button" className="link-btn" onClick={(e) => { e.stopPropagation(); setSel(s.id); }} aria-label={`Ver sesión del ${fecha(s.fecha_inicio)} desde ${s.ip_origen}`}>{fecha(s.fecha_inicio)}</button></td><td><code>{s.ip_origen}</code></td><td className="muted">{s.puerto_origen ?? "—"}</td>
+                <td>{s.protocolo}</td><td className="muted">{s.duracion_segundos == null ? "activa" : `${s.duracion_segundos} s`}</td>
+                <td className="num">{num(s.n_intentos)}</td><td className="num">{s.n_comandos}</td><td>{s.obtuvo_acceso ? "sí" : "no"}</td>
               </tr>
             ))}
             {lista.data?.items.length === 0 && <tr><td colSpan={8} className="muted">No hay sesiones con esos filtros.</td></tr>}
           </tbody>
-        </table>
+        </table></div>
         <div className="pager">
-          <button className="btn btn-ghost" disabled={pag === 0} onClick={() => setPag(pag - 1)}>← Anterior</button>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={pag === 0} onClick={() => setPag(pag - 1)}>← Anterior</button>
           <span className="muted">Página {pag + 1} de {paginas} · {num(total)} sesiones</span>
-          <button className="btn btn-ghost" disabled={pag + 1 >= paginas} onClick={() => setPag(pag + 1)}>Siguiente →</button>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={pag + 1 >= paginas} onClick={() => setPag(pag + 1)}>Siguiente →</button>
         </div>
       </Card>
 
@@ -146,7 +146,7 @@ export default function Sessions() {
                 <code>{h.hash_descarga_sha256}</code>
               </div>
             ))}
-            <p className="muted">Solo se registra el hash y los metadatos; nunca se ejecuta el archivo.</p>
+            <p className="muted">Se guardan solo el hash y los metadatos: el archivo nunca se ejecuta.</p>
           </Card>
         </div>
       )}
