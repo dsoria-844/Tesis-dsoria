@@ -9,10 +9,10 @@ Stack: Cowrie · PostgreSQL 16 · Python/FastAPI · React + TypeScript.
 
 | Parte | Estado |
 |---|---|
-| Parser, ingesta idempotente, motor ASI, API, evaluación | Verificado con PostgreSQL 16 real: 104 tests OK (incluye laboratorio de ataques) |
-| Ejecución conjunta (collector + engine + API + web) fuera de Docker | Verificado: 4 alertas esperadas |
-| Build del frontend | Verificado (`npm run build`) |
-| **Stack Docker completo (Cowrie real, red, nginx, atacantes)** | **Pendiente de verificar en tu Mac** (`scripts/smoke.sh`) |
+| Parser, ingesta idempotente, motor ASI, API, evaluación, laboratorio, perfil | 131 tests OK contra PostgreSQL 16 real (base efímera propia, `test-db`) |
+| Stack Docker completo en macOS (Cowrie real, red aislada, nginx, atacantes) | Verificado: `scripts/smoke.sh` → PASS (incluye una alerta CRÍTICA generada por un ataque real contra Cowrie) |
+| Imagen de Cowrie | Fijada por digest (v3.1.5) en `.env.example`, `init-env.sh` y `docker-compose.yml` (riesgo R5) |
+| Build del frontend | Verificado (`npm run build` dentro de la imagen `web`) |
 
 ## Requisitos (macOS)
 
@@ -106,7 +106,7 @@ El gráfico "Frecuencia de ataques" tiene su propio selector (Minuto, Hora, Día
 ./scripts/smoke.sh        # levanta el stack, ataca y comprueba que se generan sesiones y alertas
 ```
 
-Si falla, es probable que haya que ajustar rutas de Cowrie (ver "Puntos a verificar").
+Si falla, revisá `docker compose logs collector engine cowrie`.
 
 ## Evaluación del motor ASI
 
@@ -114,7 +114,7 @@ Si falla, es probable que haya que ajustar rutas de Cowrie (ver "Puntos a verifi
 docker compose --profile tools run --rm evaluate
 ```
 
-Genera `informe.md`, `resultados.json` y `barrido_umbral.csv`. Ya hay una corrida de ejemplo (semilla 42) en `resultados/`.
+Genera `informe.md`, `resultados.json` y `barrido_umbral.csv` en `resultados/` (carpeta excluida del repositorio por `.gitignore`; se regenera con este comando, semilla 42).
 
 ## Tests
 
@@ -142,6 +142,10 @@ docker compose --profile test run --rm tests
 - Columnas adicionales: `evento_uid`, `ingresado_en`, `tipo_evento`, `url_descarga`, `hash_descarga_sha256`, `n_intentos`, `k_pares_distintos`, `latencia_ms`.
 - Puertos de Cowrie 2222/2223 en el host.
 - El corpus de evaluación tiene ~203 mil intentos (el documento menciona 30–50 mil).
+- Escenario 1: Nmap usa escaneo por conexión completa (`-sT`); un escaneo SYN sin handshake no llega a Cowrie y el contenedor no tiene sockets raw.
+- Escenario 2: Hydra espera 30 s fijos entre intentos (no permite intervalos aleatorios); el script propio (`sigilosa`) usa 20–40 s.
+- Escenario 3: se usa el diccionario propio del proyecto (estilo filtración), no RockYou.
+- El historial de alertas es inmutable para los roles de la aplicación; la única excepción es el reinicio del laboratorio (auditado, `LAB_RESET_ENABLED=false` en producción).
 
 ## Limitaciones (decirlas en la defensa)
 
@@ -149,10 +153,8 @@ docker compose --profile test run --rm tests
 - **No implementado:** TOTP, VPN, copias de seguridad automáticas (la política de backups es solo diseño).
 - La latencia "log → base" excluye reproducciones históricas; solo mide ingesta en vivo.
 
-## Puntos a verificar en la Mac
+## Notas de macOS (ya resueltas)
 
-1. Que la imagen de Cowrie arranque y escriba `cowrie.json` en `/cowrie/cowrie-git/var/log/cowrie`.
-2. Variable para habilitar Telnet y ruta de `userdb.txt` según la versión de la imagen.
-3. Permisos del tmpfs de descargas y nombre del sensor (hostname).
-4. Atacantes con paramiko y el proxy nginx.
-5. **Fijar la versión de Cowrie** en `.env` (`COWRIE_IMAGE`) una vez verificada (riesgo R5).
+- Al descomprimir un zip, macOS quita el permiso de ejecución y agrega cuarentena: por eso los comandos `xattr` y `chmod` de la puesta en marcha. Sin ellos `db/init/01_roles.sh` no corre y la base queda sin roles.
+- Si la base se inicializó mal, hay que recrear el volumen (`docker compose down && docker volume rm honeypot-asi_pgdata`): los scripts de `db/init/` solo corren con el volumen vacío.
+- Docker Desktop hace que todas las conexiones desde el host lleguen con la misma IP (`172.18.0.1`): el bloqueo por IP del login (5 fallos en 15 min) afecta a todos los usuarios del navegador a la vez.
