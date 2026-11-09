@@ -155,6 +155,5 @@ docker compose --profile test run --rm tests
 
 ## Notas de macOS (ya resueltas)
 
-- Al descomprimir un zip, macOS quita el permiso de ejecución y agrega cuarentena: por eso los comandos `xattr` y `chmod` de la puesta en marcha. Sin ellos `db/init/01_roles.sh` no corre y la base queda sin roles.
 - Si la base se inicializó mal, hay que recrear el volumen (`docker compose down && docker volume rm honeypot-asi_pgdata`): los scripts de `db/init/` solo corren con el volumen vacío.
 - Docker Desktop hace que todas las conexiones desde el host lleguen con la misma IP (`172.18.0.1`): el bloqueo por IP del login (5 fallos en 15 min) afecta a todos los usuarios del navegador a la vez.
