@@ -1,0 +1,190 @@
+# Sistema de detección y análisis de ataques automatizados mediante señuelos de seguridad.
+# Dos redes:
+#   honeynet  -> "internal": SIN salida a la LAN ni a Internet (contención / egress filtering).
+#                Solo viven acá Cowrie, el sinkhole y los contenedores atacantes de laboratorio.
+#   backend   -> base de datos, colector, motor ASI, API y web. Cowrie NO está en esta red.
+name: honeypot-asi
+
+networks:
+  honeynet:
+    internal: true
+  backend: {}
+  labctl:                                # control del laboratorio de ataques: solo api <-> lab-runner
+    internal: true
+
+volumes:
+  pgdata: {}
+  cowrie-logs: {}
+
+x-app: &app
+  build: ./services/app
+  restart: unless-stopped
+  networks: [backend]
+  depends_on:
+    db: { condition: service_healthy }
+
+services:
+  # ------------------------------------------------------------ persistencia
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-honeypot}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ejecutá ./scripts/init-env.sh}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?}
+      DB_INGEST_PASSWORD: ${DB_INGEST_PASSWORD:?}
+      DB_ENGINE_PASSWORD: ${DB_ENGINE_PASSWORD:?}
+      DB_API_PASSWORD: ${DB_API_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-honeypot}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  # ------------------------------------------------------------ captura
+  cowrie:
+    image: ${COWRIE_IMAGE:-cowrie/cowrie@sha256:797d45ca8823d313bec0994232b982f3b99412d4e68e234608d6c1f78d32e3fe}
+    restart: unless-stopped
+    hostname: cowrie-edge-01
+    environment:
+      COWRIE_TELNET_ENABLED: "yes"
+    volumes:
+      - cowrie-logs:/cowrie/cowrie-git/var/log/cowrie
+      - ./cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
+    tmpfs:                                   # artefactos descargados: en memoria y sin ejecución
+      - /cowrie/cowrie-git/var/lib/cowrie/downloads:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [honeynet]
+    # Para probar a mano desde tu Mac (la IP de origen se pierde, todo llega desde el gateway):
+    #   agregá  ports: ["127.0.0.1:2222:2222"]  y quitá "internal: true" SOLO para esa prueba.
+
+  sinkhole:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes: ["./sinkhole/html:/usr/share/nginx/html:ro"]
+    networks:
+      honeynet:
+        aliases: [files.example.test]
+
+  # ------------------------------------------------------------ pipeline
+  collector:
+    <<: *app
+    command: ["python", "-m", "hp.collector"]
+    environment:
+      DATABASE_URL: postgresql://cowrie_ingest:${DB_INGEST_PASSWORD}@db:5432/${POSTGRES_DB:-honeypot}
+      COWRIE_LOG_DIR: /data/cowrie
+    volumes: ["cowrie-logs:/data/cowrie:ro"]
+
+  engine:
+    <<: *app
+    command: ["python", "-m", "hp.engine"]
+    environment:
+      DATABASE_URL: postgresql://asi_engine:${DB_ENGINE_PASSWORD}@db:5432/${POSTGRES_DB:-honeypot}
+      ASI_INTERVAL_SECONDS: "30"
+
+  api:
+    <<: *app
+    command: ["uvicorn", "hp.api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DATABASE_URL: postgresql://api_app:${DB_API_PASSWORD}@db:5432/${POSTGRES_DB:-honeypot}
+      JWT_SECRET: ${JWT_SECRET:?}
+      LAB_RUNNER_URL: http://lab-runner:8099
+      LAB_RUNNER_TOKEN: ${LAB_RUNNER_TOKEN:-}
+      LAB_RESET_ENABLED: ${LAB_RESET_ENABLED:-true}   # lab only; production must set false
+    networks: [backend, labctl]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: ./services/web
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:80"]     # el panel solo escucha en tu equipo (en producción: VPN / lista de IPs)
+    depends_on: [api]
+    networks: [backend]
+
+  # ------------------------------------------------------------ herramientas (perfiles)
+  seed:                              # docker compose --profile tools run --rm seed
+    <<: *app
+    profiles: ["tools"]
+    restart: "no"
+    command: ["python", "-m", "hp.cli", "seed"]
+    environment:
+      DATABASE_URL_OWNER: postgresql://db_owner:${DB_OWNER_PASSWORD}@db:5432/${POSTGRES_DB:-honeypot}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+
+  evaluate:                          # docker compose --profile tools run --rm evaluate
+    build: ./services/app
+    profiles: ["tools"]
+    restart: "no"
+    user: root
+    command: ["python", "-m", "hp.evaluation.run", "--episodes", "400", "--seed", "42", "--out", "/out"]
+    volumes: ["./resultados:/out"]
+    networks: [backend]
+
+  replay:                            # docker compose --profile demo run --rm replay
+    build: ./services/app
+    profiles: ["demo"]
+    restart: "no"
+    user: root
+    command: ["python", "-m", "hp.tools.gen_log", "--out", "/data/cowrie/cowrie.json"]
+    volumes: ["cowrie-logs:/data/cowrie"]
+    networks: [backend]
+
+  attacker:                          # docker compose --profile attack run --rm attacker stuffing
+    build: { context: ., dockerfile: tools/attacker/Dockerfile }
+    profiles: ["attack"]
+    restart: "no"
+    networks: [honeynet]
+    depends_on: [cowrie]
+
+  lab-runner:                        # docker compose --profile lab up -d lab-runner  (lo usa el panel)
+    build: { context: ., dockerfile: tools/attacker/Dockerfile }
+    profiles: ["lab"]
+    restart: unless-stopped
+    entrypoint: ["python", "-u", "/attack/runner.py"]
+    init: true                       # reaps orphaned hydra/nmap children after a stop
+    environment:
+      LAB_RUNNER_TOKEN: ${LAB_RUNNER_TOKEN:-}
+      LAB_PEER_HOST: api
+    networks: [honeynet, labctl]     # NO está en backend; el puerto de control solo escucha en labctl
+    depends_on: [cowrie]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  # Ephemeral PostgreSQL for the test suite: the tests drop/recreate cluster-wide roles,
+  # so they must never run against the live "db" service.
+  test-db:
+    image: postgres:16-alpine
+    profiles: ["test"]
+    restart: "no"
+    environment:
+      POSTGRES_PASSWORD: test-only
+    tmpfs: ["/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [backend]
+
+  tests:                             # docker compose --profile test run --rm tests
+    build: ./services/app
+    profiles: ["test"]
+    restart: "no"
+    command: ["python", "-m", "pytest", "-q", "tests"]
+    environment:
+      TEST_PG_ADMIN_DSN: postgresql://postgres:test-only@test-db:5432/postgres
+      TEST_DB_INIT_DIR: /db/init
+    volumes: ["./db:/db:ro", "./tools:/tools:ro"]
+    depends_on:
+      test-db: { condition: service_healthy }
+    networks: [backend]

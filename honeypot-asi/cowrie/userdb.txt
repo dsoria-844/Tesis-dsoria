@@ -1,0 +1,2 @@
+root:x:toor-honeypot
+admin:x:admin-honeypot
