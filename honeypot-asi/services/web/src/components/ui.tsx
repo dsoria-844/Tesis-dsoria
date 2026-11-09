@@ -1,22 +1,36 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-export const COLOR: Record<string, string> = { BAJA: "var(--ok)", MEDIA: "var(--warn)", CRITICA: "var(--crit)" };
+/** Severity foreground colours as theme tokens (same palette as the badges); only used as CSS colour values (text, bars, SVG stroke/fill). */
+export const COLOR: Record<string, string> = { BAJA: "var(--baja-fg)", MEDIA: "var(--media-fg)", CRITICA: "var(--critica-fg)" };
 export const ETIQUETA: Record<string, string> = { BAJA: "Baja", MEDIA: "Media", CRITICA: "Crítica" };
 
-export function Badge({ clase }: { clase: string }) {
-  return (
-    <span className="badge" style={{ color: COLOR[clase], borderColor: COLOR[clase] }}>
-      {ETIQUETA[clase] ?? clase}
-    </span>
-  );
+export function Badge({ clase, large = false }: { clase: string; large?: boolean }) {
+  return <span className={`badge ${clase.toLowerCase()}${large ? " lg" : ""}`}>{ETIQUETA[clase] ?? clase}</span>;
 }
 
 export function clasificar(asi: number): string {
   return asi >= 0.7 ? "CRITICA" : asi >= 0.4 ? "MEDIA" : "BAJA";
 }
 
+/** Decimal with comma (es-AR style): 0.844 -> "0,844". */
+export const dec = (n: number, d = 3) => n.toFixed(d).replace(".", ",");
+
+const COMPONENTE: Record<string, { art: string; nombre: string }> = {
+  frecuencia: { art: "la", nombre: "frecuencia" }, volumen: { art: "el", nombre: "volumen" },
+  diversidad: { art: "la", nombre: "diversidad" }, persistencia: { art: "la", nombre: "persistencia" },
+};
+
+/** The 1-2 components that contribute most to the ASI (second one only if it is at least half as strong). */
+export function dominantes(items: { clave: string; aporte: number }[]): { art: string; nombre: string }[] {
+  const orden = [...items].sort((a, b) => b.aporte - a.aporte);
+  if (!orden.length || orden[0].aporte <= 0) return [];
+  const out = [orden[0]];
+  if (orden[1] && orden[1].aporte >= orden[0].aporte * 0.5) out.push(orden[1]);
+  return out.map((c) => COMPONENTE[c.clave] ?? { art: "el", nombre: c.clave });
+}
+
 export function Estado({ e }: { e: string }) {
-  return <span className={`estado estado-${e.toLowerCase()}`}>{e.replace("_", " ")}</span>;
+  return <span className={`tag estado-${e.toLowerCase()}`}>{e.charAt(0) + e.slice(1).toLowerCase().replace("_", " ")}</span>;
 }
 
 export function Card({ titulo, extra, children, className = "" }: { titulo?: string; extra?: ReactNode; children: ReactNode; className?: string }) {
@@ -24,7 +38,7 @@ export function Card({ titulo, extra, children, className = "" }: { titulo?: str
     <section className={`card ${className}`}>
       {(titulo || extra) && (
         <header className="card-h">
-          <h3>{titulo}</h3>
+          <h2>{titulo}</h2>
           {extra}
         </header>
       )}
