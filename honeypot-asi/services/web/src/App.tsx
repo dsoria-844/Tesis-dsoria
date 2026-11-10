@@ -13,7 +13,10 @@ import Sessions from "./pages/Sessions";
 import Users from "./pages/Users";
 import { fijarTema, temaActual, type Tema } from "./tema";
 
-interface Ctx { me: Me; logout: () => void }
+interface Ctx {
+  me: Me;
+  logout: () => void;
+}
 const AuthCtx = createContext<Ctx | null>(null);
 export const useAuth = () => {
   const c = useContext(AuthCtx);
@@ -27,17 +30,41 @@ export const ROL: Record<Rol, string> = {
   ADMIN_INFRA: "Administrador de Infraestructura",
 };
 
-const iniciales = (correo: string) => correo.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
+const iniciales = (correo: string) =>
+  correo
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 2)
+    .toUpperCase() || "?";
 
 function ThemeToggle() {
   const [tema, setTema] = useState<Tema>(temaActual);
   const oscuro = tema === "dark";
   const etiqueta = oscuro ? "Activar tema claro" : "Activar tema oscuro";
-  const alternar = () => { const t: Tema = oscuro ? "light" : "dark"; fijarTema(t); setTema(t); };
+  const alternar = () => {
+    const t: Tema = oscuro ? "light" : "dark";
+    fijarTema(t);
+    setTema(t);
+  };
   return (
-    <button type="button" className="icon-btn theme-btn" onClick={alternar} aria-label={etiqueta} aria-pressed={oscuro} title={etiqueta}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <button
+      type="button"
+      className="icon-btn theme-btn"
+      onClick={alternar}
+      aria-label={etiqueta}
+      aria-pressed={oscuro}
+      title={etiqueta}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
         {oscuro ? (
           <>
             <circle cx="12" cy="12" r="4" />
@@ -59,10 +86,17 @@ function TopNav({ me, logout }: Ctx) {
   return (
     <header className="topnav">
       <div className="topnav-in">
-        <Link to="/" className="brand"><span className="brand-mark" aria-hidden="true" />Honeypot ASI</Link>
+        <Link to="/" className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          Honeypot ASI
+        </Link>
         <nav className="navlinks" aria-label="Secciones">
-          <NavLink to="/" end>Resumen</NavLink>
-          <NavLink to="/actividad" className={actividadActiva ? "active" : ""}>Actividad</NavLink>
+          <NavLink to="/" end>
+            Resumen
+          </NavLink>
+          <NavLink to="/actividad" className={actividadActiva ? "active" : ""}>
+            Actividad
+          </NavLink>
           {lee && <NavLink to="/sesiones">Sesiones</NavLink>}
           {lee && <NavLink to="/alertas">Alertas</NavLink>}
           {!lee && <NavLink to="/laboratorio">Laboratorio</NavLink>}
@@ -71,12 +105,26 @@ function TopNav({ me, logout }: Ctx) {
         <div className="topnav-end">
           <span className="pill">Prototipo · entorno aislado</span>
           <ThemeToggle />
-          <Link to="/perfil" className="avatar" aria-label={`Mi perfil (${me.correo})`} title={`${me.correo} · ${ROL[me.rol]}`}>
+          <Link
+            to="/perfil"
+            className="avatar"
+            aria-label={`Mi perfil (${me.correo})`}
+            title={`${me.correo} · ${ROL[me.rol]}`}
+          >
             {iniciales(me.correo)}
           </Link>
           <button type="button" className="icon-btn" onClick={logout} aria-label="Cerrar sesión" title="Cerrar sesión">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
               <line x1="21" y1="12" x2="9" y2="12" />
@@ -124,7 +172,10 @@ export default function App(): ReactNode {
     const h = () => setMe(null);
     window.addEventListener("hp:logout", h);
     if (session.token) {
-      api<Me>("/auth/me").then(setMe).catch(() => session.clear()).finally(() => setCargando(false));
+      api<Me>("/auth/me")
+        .then(setMe)
+        .catch(() => session.clear())
+        .finally(() => setCargando(false));
     }
     return () => window.removeEventListener("hp:logout", h);
   }, []);
