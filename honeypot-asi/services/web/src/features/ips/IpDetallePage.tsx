@@ -1,0 +1,258 @@
+import { useState, type KeyboardEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../../app/auth/useAuth";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { dec, fecha, num } from "../../shared/lib/format";
+import { Card } from "../../shared/ui/Card";
+import { Estado as EstadoTag } from "../../shared/ui/Estado";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { Top } from "../../shared/ui/Top";
+import { listarSesionesIp, obtenerAlertasIp, obtenerAsiIp, obtenerCredencialesIp, obtenerResumenIp } from "./api";
+import AsiCard from "./AsiCard";
+
+const LIMITE = 20;
+type Pestana = "credenciales" | "sesiones" | "alertas";
+
+function Detalle({ ip }: { ip: string }) {
+  const [tab, setTab] = useState<Pestana>("credenciales");
+  const [pag, setPag] = useState(0);
+  const cred = usePoll(() => obtenerCredencialesIp(ip), [ip], 5000);
+  const ses = usePoll(() => listarSesionesIp(ip, LIMITE, pag * LIMITE), [ip, pag], 5000);
+  const al = usePoll(() => obtenerAlertasIp(ip), [ip], 5000);
+  const totalSes = ses.data?.total ?? 0;
+  const paginas = Math.max(1, Math.ceil(totalSes / LIMITE));
+
+  const tabs: { id: Pestana; etiqueta: string; n?: number }[] = [
+    { id: "credenciales", etiqueta: "Credenciales" },
+    { id: "sesiones", etiqueta: "Sesiones", n: ses.data?.total },
+    { id: "alertas", etiqueta: "Alertas", n: al.data?.total },
+  ];
+  const onKey = (ev: KeyboardEvent) => {
+    const i = tabs.findIndex((t) => t.id === tab);
+    if (ev.key === "ArrowRight") setTab(tabs[(i + 1) % tabs.length].id);
+    else if (ev.key === "ArrowLeft") setTab(tabs[(i + tabs.length - 1) % tabs.length].id);
+    else return;
+    ev.preventDefault();
+  };
+
+  return (
+    <section className="card flush">
+      <div className="tabs" role="tablist" aria-label="Detalle de la IP" onKeyDown={onKey}>
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => setTab(t.id)}
+          >
+            {t.etiqueta}
+            {t.n != null && (
+              <>
+                {" "}
+                <span className="muted num" style={{ fontWeight: 400 }}>
+                  {num(t.n)}
+                </span>
+              </>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="tab-panel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === "credenciales" && (
+          <>
+            <Estado404 error={cred.error} />
+            {cred.data && (
+              <>
+                <p className="muted" style={{ marginBottom: 16, fontSize: 13 }}>
+                  {num(cred.data.total_intentos)} intentos de login registrados
+                </p>
+                <div className="grid3">
+                  <Top titulo="Usuarios" filas={cred.data.usuarios} />
+                  <Top titulo="Contraseñas" filas={cred.data.passwords} />
+                  <Top titulo="Pares usuario / contraseña" filas={cred.data.pares} />
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {tab === "sesiones" && (
+          <>
+            <Estado404 error={ses.error} />
+            <div className="tabla-wrap">
+              <table style={{ minWidth: 560 }}>
+                <thead>
+                  <tr>
+                    <th>Inicio</th>
+                    <th>Duración</th>
+                    <th>Proto.</th>
+                    <th>Intentos</th>
+                    <th>Comandos</th>
+                    <th>Acceso</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {ses.data?.items.map((s) => (
+                    <tr key={s.id}>
+                      <td>{fecha(s.fecha_inicio)}</td>
+                      <td className="muted">{s.duracion_segundos == null ? "activa" : `${s.duracion_segundos} s`}</td>
+                      <td>{s.protocolo}</td>
+                      <td className="num">{num(s.n_intentos)}</td>
+                      <td className="num">{s.n_comandos}</td>
+                      <td>{s.obtuvo_acceso ? "sí" : "no"}</td>
+                      <td>
+                        <Link to={`/sesiones?sesion=${s.id}`} style={{ fontWeight: 600 }}>
+                          Ver reproducción
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {ses.data?.items.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="muted">
+                        Sin sesiones registradas.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="pager">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={pag === 0}
+                onClick={() => setPag(pag - 1)}
+              >
+                ← Anterior
+              </button>
+              <span className="muted">
+                Página {pag + 1} de {paginas}
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={pag + 1 >= paginas}
+                onClick={() => setPag(pag + 1)}
+              >
+                Siguiente →
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
+              Abrí una sesión para reproducirla comando por comando.
+            </p>
+          </>
+        )}
+
+        {tab === "alertas" && (
+          <>
+            <Estado404 error={al.error} />
+            <div className="acciones" style={{ marginTop: 0, justifyContent: "space-between" }}>
+              <p className="muted">{al.data?.total ?? 0} alertas e historial de cambios</p>
+              <Link to="/alertas" style={{ fontWeight: 600 }}>
+                Gestionar en Alertas →
+              </Link>
+            </div>
+            {al.data?.items.length === 0 && (
+              <p className="muted" style={{ marginTop: 12 }}>
+                Esta IP no generó alertas.
+              </p>
+            )}
+            {al.data?.items.map((a) => (
+              <div key={a.id} style={{ marginTop: 18 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <Link to={`/alertas?alerta=${a.id}`} style={{ fontWeight: 600 }}>
+                    Alerta #{a.id}
+                  </Link>
+                  <span className="muted">
+                    {fecha(a.fecha_disparo)} · ASI <b style={{ color: "var(--ink)" }}>{dec(a.puntaje_asi)}</b>
+                  </span>
+                  <EstadoTag e={a.estado_alerta} />
+                </div>
+                {a.observaciones_auditor && (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                    Observaciones: {a.observaciones_auditor}
+                  </p>
+                )}
+                {a.historial.length === 0 && (
+                  <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                    Sin cambios de estado.
+                  </p>
+                )}
+                {a.historial.map((h, i) => (
+                  <div key={i} className="hist">
+                    <span className="hist-t">{fecha(h.fecha)}</span>
+                    <span>
+                      {h.auditor}: {h.estado_anterior} → <b>{h.estado_nuevo}</b>
+                      {h.observaciones_nueva ? ` · “${h.observaciones_nueva}”` : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function IpDetalle() {
+  const { ip = "" } = useParams();
+  const { me } = useAuth();
+  const nav = useNavigate();
+  const res = usePoll(() => obtenerResumenIp(ip), [ip], 5000);
+  const asi = usePoll(() => obtenerAsiIp(ip), [ip], 5000);
+  const volver = () => (window.history.state?.idx > 0 ? nav(-1) : nav("/"));
+  const r = res.data;
+
+  return (
+    <>
+      <div>
+        <a
+          href="/"
+          onClick={(ev) => {
+            ev.preventDefault();
+            volver();
+          }}
+          style={{ fontSize: 14, fontWeight: 500 }}
+        >
+          ← Volver
+        </a>
+        <div className="ip-title">
+          <h1>{ip}</h1>
+          {r && r.protocolos.length > 0 && <span className="tag">{r.protocolos.join(" · ")}</span>}
+          {r?.alerta_abierta && <span className="tag estado-nueva">Alerta abierta</span>}
+        </div>
+        {r && (
+          <p className="muted" style={{ marginTop: 6 }}>
+            {num(r.sesiones)} sesiones · {num(r.intentos_login)} intentos de login ({num(r.intentos_exitosos)} exitosos)
+            · {num(r.comandos)} comandos · primer evento {fecha(r.primer_evento)} · último {fecha(r.ultimo_evento)}
+          </p>
+        )}
+      </div>
+      <Estado404 error={res.error ?? asi.error} />
+      {asi.data ? (
+        <AsiCard d={asi.data} />
+      ) : (
+        <Card>
+          <p className="muted">Cargando…</p>
+        </Card>
+      )}
+      {me.rol === "ADMIN_INFRA" ? (
+        <div className="aviso">
+          Por separación de funciones, el Administrador de Infraestructura no accede a sesiones, credenciales ni
+          alertas.
+        </div>
+      ) : (
+        <Detalle ip={ip} />
+      )}
+    </>
+  );
+}
