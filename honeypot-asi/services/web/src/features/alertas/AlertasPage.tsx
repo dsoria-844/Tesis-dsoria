@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../app/auth/useAuth";
-import type { Alerta, Conteo, Estado } from "../../shared/api/types";
+import type { Alerta, Estado } from "../../shared/api/types";
 import { usePoll } from "../../shared/hooks/usePoll";
 import { dominantes } from "../../shared/lib/asi";
 import { dec, fecha, hora, num } from "../../shared/lib/format";
@@ -10,6 +10,7 @@ import { Barra } from "../../shared/ui/Barra";
 import { Card } from "../../shared/ui/Card";
 import { Estado as EstadoTag } from "../../shared/ui/Estado";
 import { Estado404 } from "../../shared/ui/Estado404";
+import { Top } from "../../shared/ui/Top";
 import { actualizarAlerta, contarAlertas, listarAlertas, obtenerAlerta, obtenerCredencialesTop } from "./api";
 
 const ESTADOS: Estado[] = ["NUEVA", "EN_REVISION", "ARCHIVADA"];
@@ -168,23 +169,6 @@ function Resolucion({ id, editable, onGuardado }: { id: number; editable: boolea
         ))}
       </div>
     </>
-  );
-}
-
-function Top({ titulo, filas }: { titulo: string; filas: Conteo[] }) {
-  return (
-    <div>
-      <h3 className="muted" style={{ marginBottom: 10, fontSize: 13 }}>
-        {titulo}
-      </h3>
-      {filas.length === 0 && <p className="muted">Sin datos.</p>}
-      {filas.map((c) => (
-        <div key={c.valor} className="fila-cred">
-          <code title={c.valor}>{c.valor}</code>
-          <span>{c.porcentaje}%</span>
-        </div>
-      ))}
-    </div>
   );
 }
 
