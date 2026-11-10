@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 /** Severity foreground colours as theme tokens (same palette as the badges); only used as CSS colour values (text, bars, SVG stroke/fill). */
-export const COLOR: Record<string, string> = { BAJA: "var(--baja-fg)", MEDIA: "var(--media-fg)", CRITICA: "var(--critica-fg)" };
+export const COLOR: Record<string, string> = {
+  BAJA: "var(--baja-fg)",
+  MEDIA: "var(--media-fg)",
+  CRITICA: "var(--critica-fg)",
+};
 export const ETIQUETA: Record<string, string> = { BAJA: "Baja", MEDIA: "Media", CRITICA: "Crítica" };
 
 export function Badge({ clase, large = false }: { clase: string; large?: boolean }) {
@@ -16,8 +20,10 @@ export function clasificar(asi: number): string {
 export const dec = (n: number, d = 3) => n.toFixed(d).replace(".", ",");
 
 const COMPONENTE: Record<string, { art: string; nombre: string }> = {
-  frecuencia: { art: "la", nombre: "frecuencia" }, volumen: { art: "el", nombre: "volumen" },
-  diversidad: { art: "la", nombre: "diversidad" }, persistencia: { art: "la", nombre: "persistencia" },
+  frecuencia: { art: "la", nombre: "frecuencia" },
+  volumen: { art: "el", nombre: "volumen" },
+  diversidad: { art: "la", nombre: "diversidad" },
+  persistencia: { art: "la", nombre: "persistencia" },
 };
 
 /** The 1-2 components that contribute most to the ASI (second one only if it is at least half as strong). */
@@ -30,10 +36,22 @@ export function dominantes(items: { clave: string; aporte: number }[]): { art: s
 }
 
 export function Estado({ e }: { e: string }) {
-  return <span className={`tag estado-${e.toLowerCase()}`}>{e.charAt(0) + e.slice(1).toLowerCase().replace("_", " ")}</span>;
+  return (
+    <span className={`tag estado-${e.toLowerCase()}`}>{e.charAt(0) + e.slice(1).toLowerCase().replace("_", " ")}</span>
+  );
 }
 
-export function Card({ titulo, extra, children, className = "" }: { titulo?: string; extra?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({
+  titulo,
+  extra,
+  children,
+  className = "",
+}: {
+  titulo?: string;
+  extra?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={`card ${className}`}>
       {(titulo || extra) && (

@@ -25,10 +25,19 @@ export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
   return (
     <div className="login-shell">
       <section className="login-hero">
-        <div className="brand"><span className="brand-mark" aria-hidden="true" />Honeypot ASI</div>
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          Honeypot ASI
+        </div>
         <div>
-          <h1>Del ruido de ataques<br />a las alertas que importan.</h1>
-          <p className="lead">Un honeypot registra cada intento de acceso y el Índice de Severidad de Ataque (ASI) separa la actividad crítica del ruido de fondo.</p>
+          <h1>
+            Del ruido de ataques
+            <br />a las alertas que importan.
+          </h1>
+          <p className="lead">
+            Un honeypot registra cada intento de acceso y el Índice de Severidad de Ataque (ASI) separa la actividad
+            crítica del ruido de fondo.
+          </p>
         </div>
         <div className="formula">
           <span>ASI = 0,25·F + 0,30·V + 0,20·D + 0,25·P</span>
@@ -43,16 +52,39 @@ export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
           </div>
           <label className="campo">
             Correo
-            <input type="email" autoComplete="username" value={correo} onChange={(e) => setCorreo(e.target.value)} required autoFocus />
+            <input
+              type="email"
+              autoComplete="username"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              required
+              autoFocus
+            />
           </label>
           <label className="campo">
             Contraseña
-            <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
           </label>
-          {error && <div className="aviso aviso-error" role="alert">{error}</div>}
-          <button className="btn" disabled={enviando}>{enviando ? "Ingresando…" : "Ingresar"}</button>
-          <p className="muted" style={{ fontSize: 13 }}>Tras 5 intentos fallidos el acceso se bloquea 15 minutos.</p>
-          <p className="fine">Prototipo de Trabajo Final de Grado · Licenciatura en Seguridad Informática · Universidad Siglo 21</p>
+          {error && (
+            <div className="aviso aviso-error" role="alert">
+              {error}
+            </div>
+          )}
+          <button className="btn" disabled={enviando}>
+            {enviando ? "Ingresando…" : "Ingresar"}
+          </button>
+          <p className="muted" style={{ fontSize: 13 }}>
+            Tras 5 intentos fallidos el acceso se bloquea 15 minutos.
+          </p>
+          <p className="fine">
+            Prototipo de Trabajo Final de Grado · Licenciatura en Seguridad Informática · Universidad Siglo 21
+          </p>
         </form>
       </section>
     </div>

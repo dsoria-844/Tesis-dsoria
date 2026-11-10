@@ -11,7 +11,9 @@ const PAGE = 50;
 async function cargar(paginas: number, desde: string | null): Promise<ActividadVivo> {
   // Refresh every loaded page (limit is capped at 200 server-side); drop IPs repeated when pages shift.
   const rs = await Promise.all(
-    Array.from({ length: paginas }, (_, i) => api<ActividadVivo>(conDesde(`/metrics/live?todo=true&limit=${PAGE}&offset=${i * PAGE}`, desde))),
+    Array.from({ length: paginas }, (_, i) =>
+      api<ActividadVivo>(conDesde(`/metrics/live?todo=true&limit=${PAGE}&offset=${i * PAGE}`, desde)),
+    ),
   );
   const vistas = new Set<string>();
   const items = rs.flatMap((r) => r.items).filter((a) => !vistas.has(a.ip_origen) && vistas.add(a.ip_origen));
@@ -30,34 +32,57 @@ export default function Actividad() {
   return (
     <>
       <div className="page-head">
-        <div><h1>Actividad</h1><p>Todas las IPs de origen registradas por el honeypot, de la más reciente a la más antigua.</p></div>
-        <Link to="/" className="btn btn-ghost">← Volver al resumen</Link>
+        <div>
+          <h1>Actividad</h1>
+          <p>Todas las IPs de origen registradas por el honeypot, de la más reciente a la más antigua.</p>
+        </div>
+        <Link to="/" className="btn btn-ghost">
+          ← Volver al resumen
+        </Link>
       </div>
       <Card
         titulo="Actividad histórica por IP"
-        extra={activo
-          ? <span className="en-vivo"><i className="punto-vivo" aria-hidden="true" />En vivo</span>
-          : <span className="muted" style={{ fontSize: 12 }}>Sin ataques en curso</span>}
+        extra={
+          activo ? (
+            <span className="en-vivo">
+              <i className="punto-vivo" aria-hidden="true" />
+              En vivo
+            </span>
+          ) : (
+            <span className="muted" style={{ fontSize: 12 }}>
+              Sin ataques en curso
+            </span>
+          )
+        }
       >
         <Estado404 error={v.error} />
         {desde && (
           <p className="muted">
             Vista limpiada el {fecha(desde)} ·{" "}
-            <button type="button" className="link-btn" onClick={() => restablecerVista(me.id)}>Restablecer</button>
+            <button type="button" className="link-btn" onClick={() => restablecerVista(me.id)}>
+              Restablecer
+            </button>
           </p>
         )}
         {d && d.items.length === 0 && (
-          <p className="muted">{desde ? "No hay actividad nueva desde que limpiaste la vista." : "Todavía no se registraron ataques."}</p>
+          <p className="muted">
+            {desde ? "No hay actividad nueva desde que limpiaste la vista." : "Todavía no se registraron ataques."}
+          </p>
         )}
         {d && d.items.length > 0 && (
           <>
             <p className="muted">
-              {num(d.totales.ips)} IP · {num(d.totales.sesiones)} sesiones · {num(d.totales.intentos_login)} intentos de login · {num(d.totales.comandos)} comandos
+              {num(d.totales.ips)} IP · {num(d.totales.sesiones)} sesiones · {num(d.totales.intentos_login)} intentos de
+              login · {num(d.totales.comandos)} comandos
             </p>
             <TablaActividad items={d.items} ahora={d.ahora} />
-            <p className="muted">Mostrando {num(d.items.length)} de {num(d.total_ips)} IP.</p>
+            <p className="muted">
+              Mostrando {num(d.items.length)} de {num(d.total_ips)} IP.
+            </p>
             {d.items.length < d.total_ips && (
-              <button type="button" className="btn btn-ghost" onClick={() => setPaginas((p) => p + 1)}>Cargar más</button>
+              <button type="button" className="btn btn-ghost" onClick={() => setPaginas((p) => p + 1)}>
+                Cargar más
+              </button>
             )}
           </>
         )}

@@ -9,5 +9,9 @@ export function temaActual(): Tema {
 /** Applies and persists the viewer's choice (storage may be unavailable: ignore failures). */
 export function fijarTema(t: Tema): void {
   document.documentElement.dataset.theme = t;
-  try { localStorage.setItem(CLAVE, t); } catch { /* private mode / blocked storage */ }
+  try {
+    localStorage.setItem(CLAVE, t);
+  } catch {
+    /* private mode / blocked storage */
+  }
 }
