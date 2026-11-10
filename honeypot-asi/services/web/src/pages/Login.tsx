@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { api, session, type Me, type TokenOut } from "../api";
+import { obtenerMe } from "../app/auth/api";
+import type { Me } from "../app/auth/types";
+import { api } from "../shared/api/client";
+import { session } from "../shared/api/session";
+import type { TokenOut } from "../shared/api/types";
 
 export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
   const [correo, setCorreo] = useState("");
@@ -14,7 +18,7 @@ export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
     try {
       const t = await api<TokenOut>("/auth/login", { method: "POST", json: { correo, password } });
       session.set(t.access_token);
-      onLogin(await api<Me>("/auth/me"));
+      onLogin(await obtenerMe());
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
     } finally {

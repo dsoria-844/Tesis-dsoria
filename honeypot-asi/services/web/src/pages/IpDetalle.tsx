@@ -11,30 +11,18 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  api,
-  type AlertasIp,
-  type AsiIp,
-  type Conteo,
-  type CredencialesIp,
-  type Pagina,
-  type ResumenIp,
-  type Sesion,
-} from "../api";
-import { useAuth } from "../App";
-import {
-  Badge,
-  Barra,
-  Card,
-  Estado as EstadoTag,
-  Estado404,
-  COLOR,
-  dec,
-  dominantes,
-  fecha,
-  num,
-  usePoll,
-} from "../components/ui";
+import { useAuth } from "../app/auth/useAuth";
+import { api } from "../shared/api/client";
+import type { AlertasIp, AsiIp, Conteo, CredencialesIp, Pagina, ResumenIp, Sesion } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { dominantes } from "../shared/lib/asi";
+import { dec, fecha, num } from "../shared/lib/format";
+import { COLOR } from "../shared/lib/severity";
+import { Badge } from "../shared/ui/Badge";
+import { Barra } from "../shared/ui/Barra";
+import { Card } from "../shared/ui/Card";
+import { Estado as EstadoTag } from "../shared/ui/Estado";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const LIMITE = 20;
 const NOMBRE = {

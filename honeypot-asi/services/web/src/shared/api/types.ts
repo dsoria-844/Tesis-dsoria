@@ -1,87 +1,8 @@
-const KEY = "hp_token";
-
-export const session = {
-  get token(): string | null {
-    return sessionStorage.getItem(KEY);
-  },
-  set(t: string) {
-    sessionStorage.setItem(KEY, t);
-  },
-  clear() {
-    sessionStorage.removeItem(KEY);
-    // UI preferences that must last only for the logged-in session
-    try {
-      sessionStorage.removeItem(VISTA_KEY);
-    } catch {
-      /* storage unavailable */
-    }
-  },
-};
-
-// Chart granularity chosen on the dashboard: kept while the session lasts, reset on logout.
-const VISTA_KEY = "hp_vista_grafico";
-export const preferencias = {
-  vistaGrafico(): VistaSerie | null {
-    try {
-      const v = sessionStorage.getItem(VISTA_KEY);
-      return v && ["minuto", "hora", "dia", "3d", "5d"].includes(v) ? (v as VistaSerie) : null;
-    } catch {
-      return null;
-    }
-  },
-  guardarVistaGrafico(v: VistaSerie) {
-    try {
-      sessionStorage.setItem(VISTA_KEY, v);
-    } catch {
-      /* storage unavailable */
-    }
-  },
-};
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-export async function api<T>(path: string, init: Omit<RequestInit, "body"> & { json?: unknown } = {}): Promise<T> {
-  const headers = new Headers(init.headers);
-  if (session.token) headers.set("Authorization", `Bearer ${session.token}`);
-  let body: string | undefined;
-  if (init.json !== undefined) {
-    headers.set("Content-Type", "application/json");
-    body = JSON.stringify(init.json);
-  }
-  const r = await fetch(`/api/v1${path}`, { ...init, headers, body });
-  if (r.status === 401 && !path.startsWith("/auth/login")) {
-    session.clear();
-    window.dispatchEvent(new Event("hp:logout"));
-  }
-  if (!r.ok) {
-    let msg = r.statusText;
-    try {
-      const j = await r.json();
-      msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
-    } catch {
-      /* sin cuerpo JSON */
-    }
-    throw new ApiError(r.status, msg);
-  }
-  return (await r.json()) as T;
-}
+import type { Rol } from "../../app/auth/types";
 
 // ------------------------------------------------------------------ tipos
-export type Rol = "RESPONSABLE_SEGURIDAD" | "AUDITOR" | "ADMIN_INFRA";
 export type Estado = "NUEVA" | "EN_REVISION" | "ARCHIVADA";
 
-export interface Me {
-  id: string;
-  correo: string;
-  rol: Rol;
-}
 export interface TokenOut {
   access_token: string;
   rol: Rol;

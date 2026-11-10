@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { api, preferencias, type ActividadVivo, type Kpi, type Metricas, type SerieOut, type VistaSerie } from "../api";
-import { useAuth } from "../App";
 import { Link } from "react-router-dom";
-import { Badge, Barra, Card, dec, Estado404, fecha, num, usePoll } from "../components/ui";
-import TablaActividad, { hace } from "../components/TablaActividad";
-import { conDesde, restablecerVista, useDesde } from "../vista";
+import { useAuth } from "../app/auth/useAuth";
+import { api } from "../shared/api/client";
+import { preferencias } from "../shared/api/preferencias";
+import type { ActividadVivo, Kpi, Metricas, SerieOut, VistaSerie } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { dec, fecha, hace, num } from "../shared/lib/format";
+import { conDesde, restablecerVista, useDesde } from "../shared/lib/vista";
+import { Badge } from "../shared/ui/Badge";
+import { Barra } from "../shared/ui/Barra";
+import { Card } from "../shared/ui/Card";
+import { Estado404 } from "../shared/ui/Estado404";
+import TablaActividad from "../shared/ui/TablaActividad";
 
 function Tarjeta({ titulo, k }: { titulo: string; k: Kpi }) {
   const pct = k.variacion_pct;

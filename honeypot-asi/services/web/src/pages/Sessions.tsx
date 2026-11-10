@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { api, type Pagina, type Sesion, type SesionDetalle } from "../api";
-import { Card, Estado404, fecha, num, usePoll } from "../components/ui";
+import { api } from "../shared/api/client";
+import type { Pagina, Sesion, SesionDetalle } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { fecha, num } from "../shared/lib/format";
+import { Card } from "../shared/ui/Card";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const LIMITE = 10;
 

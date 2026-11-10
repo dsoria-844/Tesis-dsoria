@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { api, type LabCatalogo, type LabEscenario, type LabEstado } from "../api";
-import { Badge, Estado404, usePoll } from "../components/ui";
+import { api } from "../shared/api/client";
+import type { LabCatalogo, LabEscenario, LabEstado } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { Badge } from "../shared/ui/Badge";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const ESTADO: Record<LabEstado["estado"], string> = {
   idle: "Inactivo",

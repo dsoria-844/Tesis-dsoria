@@ -1,8 +1,14 @@
 import { useRef, useState, type FormEvent } from "react";
-import { api, type Acceso, type Perfil as PerfilT, type ReinicioOut, type Rol } from "../api";
-import { ROL, useAuth } from "../App";
-import { Card, Estado404, fecha, num, usePoll } from "../components/ui";
-import { limpiarVista, restablecerVista, useDesde } from "../vista";
+import { ROL } from "../app/auth/roles";
+import { useAuth } from "../app/auth/useAuth";
+import type { Rol } from "../app/auth/types";
+import { api } from "../shared/api/client";
+import type { Acceso, Perfil as PerfilT, ReinicioOut } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { fecha, num } from "../shared/lib/format";
+import { limpiarVista, restablecerVista, useDesde } from "../shared/lib/vista";
+import { Card } from "../shared/ui/Card";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const DESCRIPCION: Record<Rol, string> = {
   RESPONSABLE_SEGURIDAD: "Consulta el panel, las sesiones, las alertas y las credenciales capturadas.",

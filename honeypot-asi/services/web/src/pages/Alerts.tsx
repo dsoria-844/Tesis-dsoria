@@ -1,22 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, type Alerta, type AlertaDetalle, type Conteo, type Credenciales, type Estado, type Pagina } from "../api";
-import { useAuth } from "../App";
-import {
-  Barra,
-  Card,
-  Estado as EstadoTag,
-  Estado404,
-  clasificar,
-  COLOR,
-  ETIQUETA,
-  dec,
-  dominantes,
-  fecha,
-  hora,
-  num,
-  usePoll,
-} from "../components/ui";
+import { useAuth } from "../app/auth/useAuth";
+import { api } from "../shared/api/client";
+import type { Alerta, AlertaDetalle, Conteo, Credenciales, Estado, Pagina } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { dominantes } from "../shared/lib/asi";
+import { dec, fecha, hora, num } from "../shared/lib/format";
+import { clasificar, COLOR, ETIQUETA } from "../shared/lib/severity";
+import { Barra } from "../shared/ui/Barra";
+import { Card } from "../shared/ui/Card";
+import { Estado as EstadoTag } from "../shared/ui/Estado";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const ESTADOS: Estado[] = ["NUEVA", "EN_REVISION", "ARCHIVADA"];
 const ESTADO_TXT: Record<Estado, string> = { NUEVA: "Nueva", EN_REVISION: "En revisión", ARCHIVADA: "Archivada" };

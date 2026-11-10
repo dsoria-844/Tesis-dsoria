@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { api, type Rol, type Usuario } from "../api";
-import { Card, Estado404, fecha, usePoll } from "../components/ui";
+import type { Rol } from "../app/auth/types";
+import { api } from "../shared/api/client";
+import type { Usuario } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { fecha } from "../shared/lib/format";
+import { Card } from "../shared/ui/Card";
+import { Estado404 } from "../shared/ui/Estado404";
 
 const ROLES: Rol[] = ["AUDITOR", "RESPONSABLE_SEGURIDAD", "ADMIN_INFRA"];
 

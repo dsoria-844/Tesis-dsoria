@@ -1,14 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
-import type { ActividadIp } from "../api";
-import { Badge, dec, num } from "./ui";
-
-export function hace(seg: number): string {
-  const s = Math.max(0, Math.round(seg));
-  if (s < 60) return `hace ${s} s`;
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min ${s % 60} s`;
-  if (s < 86400) return `hace ${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
-  return `hace ${Math.floor(s / 86400)} d ${Math.floor((s % 86400) / 3600)} h`;
-}
+import type { ActividadIp } from "../api/types";
+import { dec, hace, num } from "../lib/format";
+import { Badge } from "./Badge";
 
 /** Per-IP activity table shared by the dashboard card and the full listing. `ahora` is the server clock. */
 export default function TablaActividad({ items, ahora }: { items: ActividadIp[]; ahora: string }) {

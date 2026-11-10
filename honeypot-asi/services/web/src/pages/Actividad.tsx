@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type ActividadVivo } from "../api";
-import { Card, Estado404, fecha, num, usePoll } from "../components/ui";
-import TablaActividad from "../components/TablaActividad";
-import { useAuth } from "../App";
-import { conDesde, restablecerVista, useDesde } from "../vista";
+import { useAuth } from "../app/auth/useAuth";
+import { api } from "../shared/api/client";
+import type { ActividadVivo } from "../shared/api/types";
+import { usePoll } from "../shared/hooks/usePoll";
+import { fecha, num } from "../shared/lib/format";
+import { conDesde, restablecerVista, useDesde } from "../shared/lib/vista";
+import { Card } from "../shared/ui/Card";
+import { Estado404 } from "../shared/ui/Estado404";
+import TablaActividad from "../shared/ui/TablaActividad";
 
 const PAGE = 50;
 
