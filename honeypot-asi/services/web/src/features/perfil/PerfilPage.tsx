@@ -1,14 +1,14 @@
 import { useRef, useState, type FormEvent } from "react";
-import { ROL } from "../app/auth/roles";
-import { useAuth } from "../app/auth/useAuth";
-import type { Rol } from "../app/auth/types";
-import { api } from "../shared/api/client";
-import type { Acceso, Perfil as PerfilT, ReinicioOut } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { fecha, num } from "../shared/lib/format";
-import { limpiarVista, restablecerVista, useDesde } from "../shared/lib/vista";
-import { Card } from "../shared/ui/Card";
-import { Estado404 } from "../shared/ui/Estado404";
+import { ROL } from "../../app/auth/roles";
+import { useAuth } from "../../app/auth/useAuth";
+import type { Rol } from "../../app/auth/types";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { fecha, num } from "../../shared/lib/format";
+import { limpiarVista, restablecerVista, useDesde } from "../../shared/lib/vista";
+import { Card } from "../../shared/ui/Card";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { obtenerAccesos, obtenerPerfil, reiniciarLaboratorio } from "./api";
+import type { ReinicioOut } from "./types";
 
 const DESCRIPCION: Record<Rol, string> = {
   RESPONSABLE_SEGURIDAD: "Consulta el panel, las sesiones, las alertas y las credenciales capturadas.",
@@ -50,7 +50,7 @@ function ReinicioLab() {
     setEnviando(true);
     setError(null);
     try {
-      setRes(await api<ReinicioOut>("/lab/reiniciar", { method: "POST", json: { confirmacion: texto } }));
+      setRes(await reiniciarLaboratorio(texto));
       cerrar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo reiniciar el laboratorio");
@@ -122,8 +122,8 @@ function ReinicioLab() {
 
 export default function Perfil() {
   const { me, logout } = useAuth();
-  const perfil = usePoll(() => api<PerfilT>("/me/perfil"), [], 0);
-  const accesos = usePoll(() => api<Acceso[]>("/me/accesos"), [], 0);
+  const perfil = usePoll(() => obtenerPerfil(), [], 0);
+  const accesos = usePoll(() => obtenerAccesos(), [], 0);
   const desde = useDesde(me.id);
   const p = perfil.data;
 

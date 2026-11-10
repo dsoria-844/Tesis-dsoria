@@ -1,16 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useAuth } from "../app/auth/useAuth";
-import { api } from "../shared/api/client";
-import type { Alerta, AlertaDetalle, Conteo, Credenciales, Estado, Pagina } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { dominantes } from "../shared/lib/asi";
-import { dec, fecha, hora, num } from "../shared/lib/format";
-import { clasificar, COLOR, ETIQUETA } from "../shared/lib/severity";
-import { Barra } from "../shared/ui/Barra";
-import { Card } from "../shared/ui/Card";
-import { Estado as EstadoTag } from "../shared/ui/Estado";
-import { Estado404 } from "../shared/ui/Estado404";
+import { useAuth } from "../../app/auth/useAuth";
+import type { Alerta, Conteo, Estado } from "../../shared/api/types";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { dominantes } from "../../shared/lib/asi";
+import { dec, fecha, hora, num } from "../../shared/lib/format";
+import { clasificar, COLOR, ETIQUETA } from "../../shared/lib/severity";
+import { Barra } from "../../shared/ui/Barra";
+import { Card } from "../../shared/ui/Card";
+import { Estado as EstadoTag } from "../../shared/ui/Estado";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { actualizarAlerta, contarAlertas, listarAlertas, obtenerAlerta, obtenerCredencialesTop } from "./api";
 
 const ESTADOS: Estado[] = ["NUEVA", "EN_REVISION", "ARCHIVADA"];
 const ESTADO_TXT: Record<Estado, string> = { NUEVA: "Nueva", EN_REVISION: "En revisión", ARCHIVADA: "Archivada" };
@@ -57,7 +57,7 @@ function Desglose({ a }: { a: Alerta }) {
 }
 
 function Resolucion({ id, editable, onGuardado }: { id: number; editable: boolean; onGuardado: () => void }) {
-  const det = usePoll(() => api<AlertaDetalle>(`/alerts/${id}`), [id], 0);
+  const det = usePoll(() => obtenerAlerta(id), [id], 0);
   const [estado, setEstado] = useState<Estado>("NUEVA");
   const [obs, setObs] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -73,7 +73,7 @@ function Resolucion({ id, editable, onGuardado }: { id: number; editable: boolea
   async function guardar(e: FormEvent) {
     e.preventDefault();
     try {
-      await api(`/alerts/${id}`, { method: "PATCH", json: { estado_alerta: estado, observaciones_auditor: obs } });
+      await actualizarAlerta(id, estado, obs);
       setMsg({ ok: true, texto: "Cambios guardados y registrados en el historial." });
       await det.reload();
       onGuardado();
@@ -193,17 +193,17 @@ export default function Alerts() {
   const [estado, setEstado] = useState<Estado | "">("");
   const [params] = useSearchParams();
   const [sel, setSel] = useState<number | null>(Number(params.get("alerta")) || null); // deep link from the IP detail page
-  const lista = usePoll(() => api<Pagina<Alerta>>(`/alerts?limit=50${estado ? `&estado=${estado}` : ""}`), [estado]);
+  const lista = usePoll(() => listarAlertas(estado), [estado]);
   // Per-state totals for the filter pills (limit=1: only the total is used).
   const conteos = usePoll(
     async () => {
-      const r = await Promise.all(ESTADOS.map((s) => api<Pagina<Alerta>>(`/alerts?limit=1&estado=${s}`)));
+      const r = await Promise.all(ESTADOS.map((s) => contarAlertas(s)));
       return Object.fromEntries(ESTADOS.map((s, i) => [s, r[i].total])) as Record<Estado, number>;
     },
     [],
     10000,
   );
-  const cred = usePoll(() => api<Credenciales>("/credentials/top?horas=24&limit=8"), []);
+  const cred = usePoll(() => obtenerCredencialesTop(), []);
   const c = conteos.data;
   const todas = c ? ESTADOS.reduce((n, s) => n + c[s], 0) : null;
 

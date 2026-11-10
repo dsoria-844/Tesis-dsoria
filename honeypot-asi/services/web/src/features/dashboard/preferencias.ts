@@ -1,4 +1,4 @@
-import { VISTA_KEY } from "./session";
+import { VISTA_KEY } from "../../shared/api/session";
 import type { VistaSerie } from "./types";
 
 export const preferencias = {

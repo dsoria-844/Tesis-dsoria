@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { api } from "../shared/api/client";
-import type { Pagina, Sesion, SesionDetalle } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { fecha, num } from "../shared/lib/format";
-import { Card } from "../shared/ui/Card";
-import { Estado404 } from "../shared/ui/Estado404";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { fecha, num } from "../../shared/lib/format";
+import { Card } from "../../shared/ui/Card";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { listarSesiones, obtenerSesion } from "./api";
+import type { SesionDetalle } from "./types";
 
 const LIMITE = 10;
 
@@ -135,8 +135,8 @@ export default function Sessions() {
   if (ip.trim()) qs.set("ip", ip.trim());
   if (proto) qs.set("protocolo", proto);
   if (conCmd) qs.set("con_comandos", conCmd);
-  const lista = usePoll(() => api<Pagina<Sesion>>(`/sessions?${qs}`), [qs.toString()]);
-  const det = usePoll(() => (sel ? api<SesionDetalle>(`/sessions/${sel}`) : Promise.resolve(null)), [sel], 0);
+  const lista = usePoll(() => listarSesiones(qs), [qs.toString()]);
+  const det = usePoll(() => (sel ? obtenerSesion(sel) : Promise.resolve(null)), [sel], 0);
 
   const total = lista.data?.total ?? 0;
   const paginas = Math.max(1, Math.ceil(total / LIMITE));

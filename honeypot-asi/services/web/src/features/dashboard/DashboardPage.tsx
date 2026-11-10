@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
-import { useAuth } from "../app/auth/useAuth";
-import { api } from "../shared/api/client";
-import { preferencias } from "../shared/api/preferencias";
-import type { ActividadVivo, Kpi, Metricas, SerieOut, VistaSerie } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { dec, fecha, hace, num } from "../shared/lib/format";
-import { conDesde, restablecerVista, useDesde } from "../shared/lib/vista";
-import { Badge } from "../shared/ui/Badge";
-import { Barra } from "../shared/ui/Barra";
-import { Card } from "../shared/ui/Card";
-import { Estado404 } from "../shared/ui/Estado404";
-import TablaActividad from "../shared/ui/TablaActividad";
+import { useAuth } from "../../app/auth/useAuth";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { dec, fecha, hace, num } from "../../shared/lib/format";
+import { restablecerVista, useDesde } from "../../shared/lib/vista";
+import { Badge } from "../../shared/ui/Badge";
+import { Barra } from "../../shared/ui/Barra";
+import { Card } from "../../shared/ui/Card";
+import { Estado404 } from "../../shared/ui/Estado404";
+import TablaActividad from "../../shared/ui/TablaActividad";
+import { obtenerActividadEnVivo, obtenerMetricas, obtenerSerie } from "./api";
+import { preferencias } from "./preferencias";
+import type { Kpi, VistaSerie } from "./types";
 
 function Tarjeta({ titulo, k }: { titulo: string; k: Kpi }) {
   const pct = k.variacion_pct;
@@ -58,7 +58,7 @@ function ActividadEnVivo({ esInfra, uid, compacto = false }: { esInfra: boolean;
   // Most recent activity regardless of age (all-time, ordered by last event), not only the last minutes.
   // `desde` is this viewer's "clear view" marker (local to the browser; nothing is deleted).
   const desde = useDesde(uid);
-  const v = usePoll(() => api<ActividadVivo>(conDesde("/metrics/live?todo=true&limit=3", desde)), [desde], 3000);
+  const v = usePoll(() => obtenerActividadEnVivo(desde), [desde], 3000);
   const d = v.data;
   // "En vivo" only while the latest event is fresh (< 5 min); otherwise the card still shows the latest IPs.
   const ultimo = d?.items[0]?.ultimo_evento;
@@ -147,17 +147,13 @@ export default function Dashboard() {
   const { me } = useAuth();
   const [horas, setHoras] = useState(24);
   const puedeLeer = me.rol !== "ADMIN_INFRA";
-  const m = usePoll(() => api<Metricas>(`/metrics?horas=${horas}`), [horas], 5000);
+  const m = usePoll(() => obtenerMetricas(horas), [horas], 5000);
   const [vista, setVistaState] = useState<VistaSerie>(() => preferencias.vistaGrafico() ?? "hora");
   const setVista = (v: VistaSerie) => {
     setVistaState(v);
     preferencias.guardarVistaGrafico(v);
   };
-  const serie = usePoll(
-    () => api<SerieOut>(`/metrics/serie?vista=${vista}&tz=${encodeURIComponent(TZ)}`),
-    [vista],
-    5000,
-  );
+  const serie = usePoll(() => obtenerSerie(vista, TZ), [vista], 5000);
   const d = m.data;
   const vistaInfo = VISTAS.find((x) => x.id === vista)!;
   const vacia = !!serie.data && serie.data.serie.every((s) => s.ssh + s.telnet === 0);

@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { obtenerMe } from "../app/auth/api";
-import type { Me } from "../app/auth/types";
-import { api } from "../shared/api/client";
-import { session } from "../shared/api/session";
-import type { TokenOut } from "../shared/api/types";
+import { obtenerMe } from "../../app/auth/api";
+import type { Me } from "../../app/auth/types";
+import { session } from "../../shared/api/session";
+import { iniciarSesion } from "./api";
 
 export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
   const [correo, setCorreo] = useState("");
@@ -16,7 +15,7 @@ export default function Login({ onLogin }: { onLogin: (m: Me) => void }) {
     setEnviando(true);
     setError(null);
     try {
-      const t = await api<TokenOut>("/auth/login", { method: "POST", json: { correo, password } });
+      const t = await iniciarSesion(correo, password);
       session.set(t.access_token);
       onLogin(await obtenerMe());
     } catch (err) {

@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from "react";
-import type { Rol } from "../app/auth/types";
-import { api } from "../shared/api/client";
-import type { Usuario } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { fecha } from "../shared/lib/format";
-import { Card } from "../shared/ui/Card";
-import { Estado404 } from "../shared/ui/Estado404";
+import type { Rol } from "../../app/auth/types";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { fecha } from "../../shared/lib/format";
+import { Card } from "../../shared/ui/Card";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { cambiarEstadoUsuario, crearUsuario, listarUsuarios } from "./api";
+import type { Usuario } from "./types";
 
 const ROLES: Rol[] = ["AUDITOR", "RESPONSABLE_SEGURIDAD", "ADMIN_INFRA"];
 
 export default function Users() {
-  const lista = usePoll(() => api<Usuario[]>("/users"), [], 0);
+  const lista = usePoll(() => listarUsuarios(), [], 0);
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState<Rol>("AUDITOR");
@@ -19,7 +19,7 @@ export default function Users() {
   async function crear(e: FormEvent) {
     e.preventDefault();
     try {
-      await api("/users", { method: "POST", json: { correo, password, rol } });
+      await crearUsuario(correo, password, rol);
       setMsg({ ok: true, texto: `Usuario ${correo} creado.` });
       setCorreo("");
       setPassword("");
@@ -31,7 +31,7 @@ export default function Users() {
 
   async function cambiar(u: Usuario, estado: "ACTIVO" | "INACTIVO") {
     try {
-      await api(`/users/${u.id}`, { method: "PATCH", json: { estado } });
+      await cambiarEstadoUsuario(u.id, estado);
       await lista.reload();
     } catch (err) {
       setMsg({ ok: false, texto: err instanceof Error ? err.message : "Error" });

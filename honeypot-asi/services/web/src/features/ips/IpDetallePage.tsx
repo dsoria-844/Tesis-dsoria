@@ -11,18 +11,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useAuth } from "../app/auth/useAuth";
-import { api } from "../shared/api/client";
-import type { AlertasIp, AsiIp, Conteo, CredencialesIp, Pagina, ResumenIp, Sesion } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { dominantes } from "../shared/lib/asi";
-import { dec, fecha, num } from "../shared/lib/format";
-import { COLOR } from "../shared/lib/severity";
-import { Badge } from "../shared/ui/Badge";
-import { Barra } from "../shared/ui/Barra";
-import { Card } from "../shared/ui/Card";
-import { Estado as EstadoTag } from "../shared/ui/Estado";
-import { Estado404 } from "../shared/ui/Estado404";
+import { useAuth } from "../../app/auth/useAuth";
+import type { Conteo } from "../../shared/api/types";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { dominantes } from "../../shared/lib/asi";
+import { dec, fecha, num } from "../../shared/lib/format";
+import { COLOR } from "../../shared/lib/severity";
+import { Badge } from "../../shared/ui/Badge";
+import { Barra } from "../../shared/ui/Barra";
+import { Card } from "../../shared/ui/Card";
+import { Estado as EstadoTag } from "../../shared/ui/Estado";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { listarSesionesIp, obtenerAlertasIp, obtenerAsiIp, obtenerCredencialesIp, obtenerResumenIp } from "./api";
+import type { AsiIp } from "./types";
 
 const LIMITE = 20;
 const NOMBRE = {
@@ -201,16 +202,11 @@ function AsiCard({ d }: { d: AsiIp }) {
 type Pestana = "credenciales" | "sesiones" | "alertas";
 
 function Detalle({ ip }: { ip: string }) {
-  const e = encodeURIComponent(ip);
   const [tab, setTab] = useState<Pestana>("credenciales");
   const [pag, setPag] = useState(0);
-  const cred = usePoll(() => api<CredencialesIp>(`/ips/${e}/credenciales?limit=10`), [ip], 5000);
-  const ses = usePoll(
-    () => api<Pagina<Sesion>>(`/ips/${e}/sesiones?limit=${LIMITE}&offset=${pag * LIMITE}`),
-    [ip, pag],
-    5000,
-  );
-  const al = usePoll(() => api<AlertasIp>(`/ips/${e}/alertas`), [ip], 5000);
+  const cred = usePoll(() => obtenerCredencialesIp(ip), [ip], 5000);
+  const ses = usePoll(() => listarSesionesIp(ip, LIMITE, pag * LIMITE), [ip, pag], 5000);
+  const al = usePoll(() => obtenerAlertasIp(ip), [ip], 5000);
   const totalSes = ses.data?.total ?? 0;
   const paginas = Math.max(1, Math.ceil(totalSes / LIMITE));
 
@@ -399,9 +395,8 @@ export default function IpDetalle() {
   const { ip = "" } = useParams();
   const { me } = useAuth();
   const nav = useNavigate();
-  const e = encodeURIComponent(ip);
-  const res = usePoll(() => api<ResumenIp>(`/ips/${e}/resumen`), [ip], 5000);
-  const asi = usePoll(() => api<AsiIp>(`/ips/${e}/asi`), [ip], 5000);
+  const res = usePoll(() => obtenerResumenIp(ip), [ip], 5000);
+  const asi = usePoll(() => obtenerAsiIp(ip), [ip], 5000);
   const volver = () => (window.history.state?.idx > 0 ? nav(-1) : nav("/"));
   const r = res.data;
 

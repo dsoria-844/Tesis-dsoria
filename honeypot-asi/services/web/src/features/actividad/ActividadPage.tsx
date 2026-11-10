@@ -1,23 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../app/auth/useAuth";
-import { api } from "../shared/api/client";
-import type { ActividadVivo } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { fecha, num } from "../shared/lib/format";
-import { conDesde, restablecerVista, useDesde } from "../shared/lib/vista";
-import { Card } from "../shared/ui/Card";
-import { Estado404 } from "../shared/ui/Estado404";
-import TablaActividad from "../shared/ui/TablaActividad";
+import { useAuth } from "../../app/auth/useAuth";
+import type { ActividadVivo } from "../../shared/api/types";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { fecha, num } from "../../shared/lib/format";
+import { restablecerVista, useDesde } from "../../shared/lib/vista";
+import { Card } from "../../shared/ui/Card";
+import { Estado404 } from "../../shared/ui/Estado404";
+import TablaActividad from "../../shared/ui/TablaActividad";
+import { obtenerActividadPagina } from "./api";
 
 const PAGE = 50;
 
 async function cargar(paginas: number, desde: string | null): Promise<ActividadVivo> {
   // Refresh every loaded page (limit is capped at 200 server-side); drop IPs repeated when pages shift.
   const rs = await Promise.all(
-    Array.from({ length: paginas }, (_, i) =>
-      api<ActividadVivo>(conDesde(`/metrics/live?todo=true&limit=${PAGE}&offset=${i * PAGE}`, desde)),
-    ),
+    Array.from({ length: paginas }, (_, i) => obtenerActividadPagina(PAGE, i * PAGE, desde)),
   );
   const vistas = new Set<string>();
   const items = rs.flatMap((r) => r.items).filter((a) => !vistas.has(a.ip_origen) && vistas.add(a.ip_origen));

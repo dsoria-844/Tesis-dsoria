@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { api } from "../shared/api/client";
-import type { LabCatalogo, LabEscenario, LabEstado } from "../shared/api/types";
-import { usePoll } from "../shared/hooks/usePoll";
-import { Badge } from "../shared/ui/Badge";
-import { Estado404 } from "../shared/ui/Estado404";
+import { usePoll } from "../../shared/hooks/usePoll";
+import { Badge } from "../../shared/ui/Badge";
+import { Estado404 } from "../../shared/ui/Estado404";
+import { detenerEscenario, iniciarEscenario, obtenerCatalogo, obtenerEstado } from "./api";
+import type { LabEscenario, LabEstado } from "./types";
 
 const ESTADO: Record<LabEstado["estado"], string> = {
   idle: "Inactivo",
@@ -127,12 +127,12 @@ function transcurrido(seg: number): string {
 const nombre = (id?: string) => (id && META[id]?.titulo) || id || "";
 
 export default function Lab() {
-  const cat = usePoll(() => api<LabCatalogo>("/lab/scenarios"), [], 0);
+  const cat = usePoll(() => obtenerCatalogo(), [], 0);
   const [activo, setActivo] = useState(false);
   // Poll faster while a run is active (~2 s), slowly otherwise to notice runs started elsewhere.
   const st = usePoll(
     async () => {
-      const s = await api<LabEstado>("/lab/status");
+      const s = await obtenerEstado();
       setActivo(s.estado === "running" || s.estado === "stopping");
       return s;
     },
@@ -178,7 +178,7 @@ export default function Lab() {
     try {
       const json: Record<string, unknown> = { escenario: e.escenario };
       for (const p of e.params) json[p] = Number(v[p]);
-      await api("/lab/runs", { method: "POST", json });
+      await iniciarEscenario(json);
       setAbierto(true);
       await st.reload();
     } catch (err) {
@@ -192,7 +192,7 @@ export default function Lab() {
     setBusy(true);
     setMsg(null);
     try {
-      await api("/lab/runs/stop", { method: "POST" });
+      await detenerEscenario();
       await st.reload();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Error");
