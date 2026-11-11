@@ -12,7 +12,7 @@ Stack: Cowrie · PostgreSQL 16 · Python/FastAPI · React + TypeScript.
 | Parser, ingesta idempotente, motor ASI, API, evaluación, laboratorio, perfil | 131 tests OK contra PostgreSQL 16 real (base efímera propia, `test-db`) |
 | Stack Docker completo en macOS (Cowrie real, red aislada, nginx, atacantes) | Verificado: `scripts/smoke.sh` → PASS (incluye una alerta CRÍTICA generada por un ataque real contra Cowrie) |
 | Imagen de Cowrie | Fijada por digest (v3.1.5) en `.env.example`, `init-env.sh` y `docker-compose.yml` (riesgo R5) |
-| Build del frontend | Verificado (`npm run build` dentro de la imagen `web`) |
+| Frontend | Organizado por funcionalidad; ESLint + Prettier sin errores y 65 tests de Vitest OK; `npm run build` verificado dentro de la imagen `web` |
 
 ## Requisitos (macOS)
 
@@ -22,9 +22,8 @@ Stack: Cowrie · PostgreSQL 16 · Python/FastAPI · React + TypeScript.
 ## Puesta en marcha
 
 ```bash
-cd honeypot-asi
-xattr -dr com.apple.quarantine .   # macOS: quitar la cuarentena del zip descargado
-chmod +x scripts/*.sh db/init/01_roles.sh
+git clone https://github.com/dsoria-844/Tesis-dsoria.git
+cd Tesis-dsoria/honeypot-asi
 ./scripts/init-env.sh              # genera .env con contraseñas aleatorias
 docker compose up -d --build
 docker compose --profile tools run --rm seed     # crea usuarios de demo
@@ -37,6 +36,8 @@ Abrí http://127.0.0.1:8080. Usuarios de demo (clave = `DEMO_PASSWORD` del `.env
 - `admin@salta-test.local`
 
 Documentación de la API: http://127.0.0.1:8080/docs.
+
+Si en lugar de clonar descargaste un zip, antes de `init-env.sh` corré `xattr -dr com.apple.quarantine .` y `chmod +x scripts/*.sh db/init/01_roles.sh` (ver Notas de macOS).
 
 ## Demo rápida (reproducción de un log de ejemplo)
 
@@ -62,7 +63,7 @@ Con Hydra o Nmap, usá la misma red (`honeynet`) y apuntá al servicio `cowrie`,
 
 ## Laboratorio de ataques desde el panel
 
-Pestaña "Laboratorio de ataques" (solo perfil Administrador de Infraestructura): lanza y detiene los escenarios de ataque (script propio `attack.py`, Nmap y Hydra) sin usar la terminal. Está **apagada por defecto**; para habilitarla:
+Pestaña "Laboratorio" (solo perfil Administrador de Infraestructura): lanza y detiene los escenarios de ataque (script propio `attack.py`, Nmap y Hydra) sin usar la terminal. Está **apagada por defecto**; para habilitarla:
 
 ```bash
 docker compose --profile lab up -d --build lab-runner
@@ -93,12 +94,12 @@ Por qué es seguro:
 
 ## Mi perfil, limpiar vista y reiniciar laboratorio
 
-En la barra superior, el correo y el rol abren **Mi perfil** (todos los roles) y el ícono de salida cierra la sesión. Allí se ven los datos de la cuenta, los últimos 10 accesos propios (`GET /api/v1/me/accesos`) y:
+En la barra superior, el avatar abre **Mi perfil** (todos los roles), el ícono de salida cierra la sesión y el botón de tema alterna entre modo claro y oscuro (se recuerda en el navegador). Allí se ven los datos de la cuenta, los últimos 10 accesos propios (`GET /api/v1/me/accesos`) y:
 
 - **Limpiar mi vista de actividad reciente**: oculta, solo para ese usuario y en ese navegador (`localStorage`), la actividad anterior a ese momento en el panel y en `/actividad` (parámetro `desde` de `GET /api/v1/metrics/live`). **No borra datos**; "Restablecer vista" la revierte.
 - **Reiniciar laboratorio** (solo `ADMIN_INFRA`, solo laboratorio): borra de verdad sesiones, intentos, comandos, evaluaciones ASI, alertas y su historial para una demo limpia. Conserva usuarios, `accesos_log`, sensores y `ingesta_checkpoint` (si no, el colector reimportaría todo `cowrie.json`). Exige escribir `REINICIAR` y deja una fila `LAB_REINICIO` en `accesos_log`. Se implementa con la función SQL `honeypot.reiniciar_laboratorio` (`db/init/03_lab_reset.sql`, `SECURITY DEFINER`, ejecutable solo por `api_app`), sin darle DELETE/TRUNCATE a ningún rol. Al terminar emite `pg_notify('hp_lab_reset')` y el colector, que escucha ese canal, vacía sus cachés en el momento: no hace falta reiniciar el contenedor (la API no tiene acceso al socket de Docker, a propósito). El `TRUNCATE` no dispara los triggers de solo inserción, por eso queda documentado y auditado. La API lo habilita con `LAB_RESET_ENABLED` (por defecto `true` en este `docker-compose.yml`; **en producción debe ser `false`**, valor por defecto de la aplicación). En un volumen de PostgreSQL ya creado, aplicar el script una vez: `docker compose exec -T db psql -U postgres -d honeypot -f - < db/init/03_lab_reset.sql`.
 
-El gráfico "Frecuencia de ataques" tiene su propio selector (Minuto, Hora, Día, 3 días, 5 días) y usa `GET /api/v1/metrics/serie?vista=...&tz=...`, que devuelve todos los intervalos, también los vacíos.
+El gráfico "Ataques en el tiempo" tiene su propio selector (Minuto, Hora, Día, 3 días, 5 días) y usa `GET /api/v1/metrics/serie?vista=...&tz=...`, que devuelve todos los intervalos, también los vacíos.
 
 ## Verificación automática
 
@@ -114,13 +115,41 @@ Si falla, revisá `docker compose logs collector engine cowrie`.
 docker compose --profile tools run --rm evaluate
 ```
 
-Genera `informe.md`, `resultados.json` y `barrido_umbral.csv` en `resultados/` (carpeta excluida del repositorio por `.gitignore`; se regenera con este comando, semilla 42).
+Genera `informe.md`, `resultados.json` y `barrido_umbral.csv` en `resultados/` (semilla 42). La carpeta está versionada junto con las capturas del panel usadas en el documento (`resultados/capturas/`, Figuras 4 a 9).
 
 ## Tests
 
 ```bash
-docker compose --profile test run --rm tests
+docker compose --profile test run --rm tests     # backend: 131 tests contra una base efímera (test-db)
 ```
+
+## Frontend
+
+`services/web/src` está organizado por funcionalidad:
+
+```
+app/        estructura general, navegación, autenticación y tema
+shared/     cliente HTTP, componentes visuales, formateo, hooks
+features/   una carpeta por pantalla (dashboard, actividad, sesiones, alertas, ips,
+            laboratorio, usuarios, perfil, login), cada una con su página, api.ts y types.ts
+```
+
+Comandos (requieren Node 22 o superior, dentro de `services/web`):
+
+```bash
+npm ci
+npm test                 # Vitest + Testing Library
+npm run lint             # ESLint
+npm run typecheck        # tsc --noEmit
+npm run format:check     # Prettier (npm run format para aplicar)
+npm run build
+```
+
+## Cómo contribuir
+
+- Trabajar en una rama y abrir un PR contra `main`; commits con formato convencional (`feat:`, `fix:`, `docs:`...).
+- Antes del PR, correr los tests del backend y, si cambió el frontend, los comandos de la sección anterior.
+- Nunca commitear `.env` (contiene contraseñas y el token del laboratorio).
 
 ## Correspondencia con el documento
 
@@ -130,7 +159,7 @@ docker compose --profile test run --rm tests
 | Modelo de datos y roles | `db/init/01_roles.sh`, `db/init/02_schema.sql` |
 | Cálculo del ASI y alertas | `services/app/hp/engine/` |
 | API REST, autenticación, RBAC | `services/app/hp/api/` |
-| Dashboard, sesiones, alertas, usuarios | `services/web/src/pages/` |
+| Dashboard, sesiones, alertas, usuarios | `services/web/src/features/` |
 | Evaluación (matriz de confusión, pesos, umbral) | `services/app/hp/evaluation/` |
 | Despliegue aislado | `docker-compose.yml` |
 
@@ -153,8 +182,9 @@ docker compose --profile test run --rm tests
 - **No implementado:** TOTP, VPN, copias de seguridad automáticas (la política de backups es solo diseño).
 - La latencia "log → base" excluye reproducciones históricas; solo mide ingesta en vivo.
 
-## Notas de macOS (ya resueltas)
+## Notas de macOS
 
-- Al descomprimir un zip, macOS quita el permiso de ejecución y agrega cuarentena: por eso los comandos `xattr` y `chmod` de la puesta en marcha. Sin ellos `db/init/01_roles.sh` no corre y la base queda sin roles.
+- Al descomprimir un zip (no al clonar con git), macOS quita el permiso de ejecución y agrega cuarentena: por eso los comandos `xattr` y `chmod` indicados en la puesta en marcha. Sin ellos `db/init/01_roles.sh` no corre y la base queda sin roles.
 - Si la base se inicializó mal, hay que recrear el volumen (`docker compose down && docker volume rm honeypot-asi_pgdata`): los scripts de `db/init/` solo corren con el volumen vacío.
 - Docker Desktop hace que todas las conexiones desde el host lleguen con la misma IP (`172.18.0.1`): el bloqueo por IP del login (5 fallos en 15 min) afecta a todos los usuarios del navegador a la vez.
+- Si `git` responde que falta aceptar la licencia de Xcode, correr una vez `sudo xcodebuild -license accept` (o usar el git de Homebrew).
