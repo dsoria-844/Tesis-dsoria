@@ -1,4 +1,4 @@
-# Honeypot ASI — Prototipo del TFG
+# Guía técnica del prototipo
 
 Sistema de detección y análisis de ataques automatizados con señuelos (Cowrie) e Índice de Severidad de Ataque (ASI).
 Stack: Cowrie · PostgreSQL 16 · Python/FastAPI · React + TypeScript.
@@ -23,7 +23,7 @@ Stack: Cowrie · PostgreSQL 16 · Python/FastAPI · React + TypeScript.
 
 ```bash
 git clone https://github.com/dsoria-844/Tesis-dsoria.git
-cd Tesis-dsoria/honeypot-asi
+cd Tesis-dsoria
 ./scripts/init-env.sh              # genera .env con contraseñas aleatorias
 docker compose up -d --build
 docker compose --profile tools run --rm seed     # crea usuarios de demo
