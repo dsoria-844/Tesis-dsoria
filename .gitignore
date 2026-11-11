@@ -1,2 +1,9 @@
 .DS_Store
 .atl/
+.env
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.zip
